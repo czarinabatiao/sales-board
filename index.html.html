@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sales Achievement Board</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 24px; color: #222; }
+  .board { max-width: 900px; margin: 0 auto; }
+  .banner {
+    background: #8B1A1A; color: #fff; text-align: center;
+    padding: 10px 24px; font-size: 16px; font-weight: bold;
+    letter-spacing: 2px; border-radius: 4px; margin-bottom: 2rem;
+    position: relative; display: inline-block; width: 100%;
+  }
+  .banner::before, .banner::after {
+    content: ''; position: absolute; top: 50%; transform: translateY(-50%);
+    width: 0; height: 0;
+    border-top: 22px solid transparent; border-bottom: 22px solid transparent;
+  }
+  .banner::before { left: -16px; border-right: 17px solid #8B1A1A; }
+  .banner::after  { right: -16px; border-left: 17px solid #8B1A1A; }
+  .section { margin-bottom: 2rem; }
+  .section-title {
+    font-size: 24px; font-weight: bold; color: #222;
+    margin-bottom: 10px; padding-bottom: 6px;
+    border-bottom: 2px solid #8B1A1A;
+  }
+  .member-row {
+    display: flex; align-items: center;
+    background: #fff; border: 1px solid #e0e0e0;
+    border-radius: 10px; padding: 12px 16px;
+    margin-bottom: 8px; gap: 12px;
+  }
+  .avatar {
+    width: 42px; height: 42px; border-radius: 50%;
+    border: 2px solid #ddd; background: #eee;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: bold; color: #666; flex-shrink: 0;
+  }
+  .member-info { min-width: 160px; }
+  .member-name { font-size: 14px; font-weight: bold; }
+  .member-role { font-size: 12px; color: #888; }
+  .awards { display: flex; flex: 1; }
+  .award-col {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; gap: 4px; padding: 0 8px;
+    border-left: 1px solid #eee;
+  }
+  .award-label {
+    font-size: 10px; color: #999; text-transform: uppercase;
+    letter-spacing: 0.5px; white-space: nowrap;
+  }
+  .award-icons { display: flex; gap: 2px; min-height: 26px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .trophy { font-size: 20px; }
+  .btn-award {
+    background: none; border: 1px dashed #ccc; border-radius: 4px;
+    padding: 2px 7px; cursor: pointer; font-size: 13px; color: #888; line-height: 1;
+  }
+  .btn-award:hover { background: #f0f0f0; }
+  .btn-remove {
+    background: none; border: none; cursor: pointer;
+    font-size: 14px; color: #bbb; padding: 0 2px; line-height: 1;
+  }
+  .btn-remove:hover { color: #e55; }
+  .edit-bar {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin-bottom: 1.5rem; align-items: center;
+  }
+  .edit-bar input, .edit-bar select {
+    font-size: 13px; padding: 7px 10px; border-radius: 6px;
+    border: 1px solid #ccc; background: #fff; color: #222;
+  }
+  .edit-bar button {
+    font-size: 13px; padding: 7px 14px; border-radius: 6px;
+    border: 1px solid #ccc; background: #fff; color: #222; cursor: pointer;
+  }
+  .edit-bar button:hover { background: #f0f0f0; }
+  .btn-add-ent { background: #8B1A1A !important; color: #fff !important; border-color: #8B1A1A !important; }
+  .btn-add-ent:hover { background: #6e1414 !important; }
+  .btn-reset { background: #fff !important; color: #c0392b !important; border-color: #c0392b !important; margin-left: auto; }
+  .btn-reset:hover { background: #fdf0f0 !important; }
+  .saved-badge {
+    position: fixed; bottom: 20px; right: 20px;
+    background: #2ecc71; color: #fff; padding: 8px 16px;
+    border-radius: 20px; font-size: 13px; font-weight: bold;
+    opacity: 0; transition: opacity 0.4s; pointer-events: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  .saved-badge.show { opacity: 1; }
+</style>
+</head>
+<body>
+<div class="board" id="app"></div>
+<div class="saved-badge" id="saved-badge">✓ Saved</div>
+
+<script>
+const STORAGE_KEY = "sales_board_v1";
+
+const DEFAULT_DATA = {
+  enterprises: [
+    {
+      name: "Enterprise 1",
+      members: [
+        { name: "Danica Cadorna",  role: "Account Manager", awards: { deals: 2, certs: 2, sponsor: 0, soft: 0 } },
+        { name: "Dream Mina",      role: "Account Manager", awards: { deals: 2, certs: 2, sponsor: 0, soft: 0 } },
+        { name: "Melanie Danis",   role: "Account Manager", awards: { deals: 2, certs: 2, sponsor: 0, soft: 0 } },
+        { name: "Lorena Ingente",  role: "Account Manager", awards: { deals: 2, certs: 2, sponsor: 0, soft: 0 } },
+      ]
+    },
+    {
+      name: "Enterprise 2",
+      members: [
+        { name: "Art Yap",         role: "Account Manager", awards: { deals: 2, certs: 2, sponsor: 0, soft: 0 } },
+        { name: "Dream Mina",      role: "Account Manager", awards: { deals: 2, certs: 2, sponsor: 0, soft: 0 } },
+        { name: "Melanie Danis",   role: "Account Manager", awards: { deals: 2, certs: 2, sponsor: 0, soft: 0 } },
+        { name: "Lorena Ingente",  role: "Account Manager", awards: { deals: 2, certs: 2, sponsor: 0, soft: 0 } },
+      ]
+    }
+  ]
+};
+
+// Load from localStorage or use defaults
+function loadState() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(DEFAULT_DATA));
+  } catch (e) {
+    return JSON.parse(JSON.stringify(DEFAULT_DATA));
+  }
+}
+
+// Save to localStorage and show badge
+let saveTimer;
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  const badge = document.getElementById("saved-badge");
+  badge.classList.add("show");
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => badge.classList.remove("show"), 1800);
+}
+
+const state = loadState();
+
+const COLS = [
+  { key: "deals",   label: "Deals Closed", icon: "🏆" },
+  { key: "certs",   label: "Certificate",  icon: "🎖️" },
+  { key: "sponsor", label: "Sponsorship",  icon: "⭐" },
+  { key: "soft",    label: "Soft Skills",  icon: "🌟" },
+];
+
+function initials(name) {
+  return name.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
+}
+
+function addAward(ei, mi, key) {
+  state.enterprises[ei].members[mi].awards[key]++;
+  saveState();
+  render();
+}
+
+function removeAward(ei, mi, key) {
+  if (state.enterprises[ei].members[mi].awards[key] > 0) {
+    state.enterprises[ei].members[mi].awards[key]--;
+    saveState();
+    render();
+  }
+}
+
+function addMember() {
+  const name = document.getElementById("nm-name").value.trim();
+  const role = document.getElementById("nm-role").value.trim();
+  const ei   = +document.getElementById("nm-ent").value;
+  if (!name) return alert("Please enter a member name.");
+  state.enterprises[ei].members.push({
+    name, role: role || "Account Manager",
+    awards: { deals: 0, certs: 0, sponsor: 0, soft: 0 }
+  });
+  document.getElementById("nm-name").value = "";
+  saveState();
+  render();
+}
+
+function addEnterprise() {
+  state.enterprises.push({ name: "Enterprise " + (state.enterprises.length + 1), members: [] });
+  saveState();
+  render();
+}
+
+function resetAll() {
+  if (!confirm("Reset everything to default? This cannot be undone.")) return;
+  const fresh = JSON.parse(JSON.stringify(DEFAULT_DATA));
+  state.enterprises = fresh.enterprises;
+  saveState();
+  render();
+}
+
+function render() {
+  const app = document.getElementById("app");
+  let html = `<div class="banner">SALES ACHIEVEMENT BOARD</div>`;
+
+  html += `<div class="edit-bar">
+    <input id="nm-name" placeholder="New member name" style="flex:1; min-width:140px;" onkeydown="if(event.key==='Enter') addMember()" />
+    <input id="nm-role" placeholder="Role" value="Account Manager" style="width:160px;" />
+    <select id="nm-ent" style="width:150px;">
+      ${state.enterprises.map((e, i) => `<option value="${i}">${e.name}</option>`).join("")}
+    </select>
+    <button onclick="addMember()">+ Add Member</button>
+    <button class="btn-add-ent" onclick="addEnterprise()">+ Add Enterprise</button>
+    <button class="btn-reset" onclick="resetAll()">↺ Reset</button>
+  </div>`;
+
+  state.enterprises.forEach((ent, ei) => {
+    html += `<div class="section"><div class="section-title">${ent.name}</div>`;
+    if (ent.members.length === 0) {
+      html += `<p style="color:#aaa; font-size:13px; padding:12px 0;">No members yet. Add one above.</p>`;
+    }
+    ent.members.forEach((m, mi) => {
+      html += `<div class="member-row">
+        <div class="avatar">${initials(m.name)}</div>
+        <div class="member-info">
+          <div class="member-name">${m.name}</div>
+          <div class="member-role">${m.role}</div>
+        </div>
+        <div class="awards">`;
+      COLS.forEach(col => {
+        const count = m.awards[col.key];
+        html += `<div class="award-col">
+          <div class="award-label">${col.label}</div>
+          <div class="award-icons">
+            ${Array(count).fill(`<span class="trophy">${col.icon}</span>`).join("")}
+            <button class="btn-award" onclick="addAward(${ei},${mi},'${col.key}')" title="Add">+</button>
+            ${count > 0 ? `<button class="btn-remove" onclick="removeAward(${ei},${mi},'${col.key}')" title="Remove">−</button>` : ""}
+          </div>
+        </div>`;
+      });
+      html += `</div></div>`;
+    });
+    html += `</div>`;
+  });
+
+  app.innerHTML = html;
+}
+
+render();
+</script>
+</body>
+</html>
